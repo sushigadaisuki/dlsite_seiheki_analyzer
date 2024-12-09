@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         dlsite seiheki analyzer
 // @namespace    http://tampermonkey.net/
-// @version      2024-12-07
+// @version      2024-12-10
 // @description  Know your self.
 // @author       sushigadaisuki
 // @match        https://play.dlsite.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=tampermonkey.net
 // @require      https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @connect      *
 // ==/UserScript==
 
 (async function () {
@@ -29,10 +30,28 @@
         Object.entries(dict).filter(([key]) => keys.includes(key))
     );
 
-    let res = await fetch("https://raw.githubusercontent.com/sushigadaisuki/erodoujin_manga_database/refs/heads/master/dlsite_id_genre.json.gz");
-    let arrbuf = await res.arrayBuffer();
-    let uint8Array = new Uint8Array(arrbuf);
-    let id_genre = JSON.parse(pako.inflate(uint8Array, { to: 'string' }));
+    const fileUrl = "https://github.com/sushigadaisuki/dlsite_seiheki_analyzer/raw/refs/heads/master/dlsite_id_genre.json.gz";
+
+    let id_genre = null;
+    GM_xmlhttpRequest({
+        method: "GET",
+        url: fileUrl,
+        responseType: "arraybuffer",
+        onload: function (response) {
+            try {
+                let uint8Array = new Uint8Array(response.response);
+                let inflatedData = pako.inflate(uint8Array, { to: 'string' });
+                id_genre = JSON.parse(inflatedData);
+            } catch (error) {
+                console.error("Error processing the file:", error);
+            }
+        },
+        onerror: function (error) {
+            console.error("Error downloading the file:", error);
+        }
+    });
+
+
     let purchases_list = [];
     for (let i = 1; ; i++) {
         let purchases_res = await fetch(`https://play.dlsite.com/api/nest/purchases?compatible=true&page=${i}`);
